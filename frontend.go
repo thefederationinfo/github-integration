@@ -34,6 +34,7 @@ func frontend(w http.ResponseWriter, r *http.Request) {
   if accessToken != "" && repo != "" {
     db, err := sql.Open("sqlite3", "./server.db")
     if err != nil {
+      logger.Println(err)
       fmt.Fprintf(w, "Database Failure :(")
       return
     }
@@ -58,6 +59,7 @@ func frontend(w http.ResponseWriter, r *http.Request) {
 
     _, _, err = client.Repositories.CreateHook(ctx, "ganggo", "ganggo", &hook)
     if err != nil {
+      logger.Println(err)
       fmt.Fprintf(w, "Create Hook Failure :(")
       return
     }
@@ -65,6 +67,7 @@ func frontend(w http.ResponseWriter, r *http.Request) {
     _, err = db.Exec(fmt.Sprintf(`insert into repos(slug, token, secret)
       values('%s', '%s', '%s');`, repo, accessToken, secret,
     )); if err != nil {
+      logger.Println(err)
       fmt.Fprintf(w, "Database Insert Failure :(")
       return
     }
@@ -77,31 +80,19 @@ func frontend(w http.ResponseWriter, r *http.Request) {
   if code != "" {
     tok, err := conf.Exchange(ctx, code)
     if err != nil {
+      fmt.Println(err)
       fmt.Fprintf(w, "Token Failure :(")
     } else {
-      tc := conf.Client(ctx, tok)
-      client := github.NewClient(tc)
-      list, _, err := client.Repositories.List(ctx, "", &github.RepositoryListOptions{})
-      if err != nil {
-        fmt.Fprintf(w, "Repository List Failure :(")
-        return
-      }
-
       fmt.Fprintf(w, `<!DOCTYPE html>
         <html>
         <body>
         <p>You are authenticated :) Please add your repository:</p>
         <form method="GET">
-          <input type="hidden" name="access_token">%s</input>
-          <select name="repo">`, tok.AccessToken)
-      for _, repo := range list {
-        fmt.Fprintf(w, `<option value="%s">%s</option>`, repo.FullName, repo.FullName)
-      }
-      fmt.Fprintf(w, `
-          </select>
+          <input type="hidden" name="access_token" value="%s" />
+          <input type="text" name="repo" placeholder="user/repository" />
         </form>
         </body>
-        </html>`)
+        </html>`, tok.AccessToken)
     }
   } else {
     url := conf.AuthCodeURL("state", oauth2.AccessTypeOffline)

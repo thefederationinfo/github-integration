@@ -21,68 +21,64 @@ import (
   "fmt"
   "net/http"
   "github.com/google/go-github/github"
-  "database/sql"
-  _ "github.com/mattn/go-sqlite3"
   "io/ioutil"
+  "encoding/json"
 )
 
 func webhook(w http.ResponseWriter, r *http.Request) {
-  db, err := sql.Open("sqlite3", "./server.db")
-  if err != nil {
-    fmt.Println(err)
-    fmt.Fprintf(w, `{"error":"database error"}`)
-  }
-  defer db.Close()
-
   defer r.Body.Close()
   b, err := ioutil.ReadAll(r.Body)
   if err != nil {
-    fmt.Println(err)
+    logger.Println(err)
     fmt.Fprintf(w, `{"error":"invalid body"}`)
-  }
-
-  event, err := github.ParseWebHook(github.WebHookType(r), b)
-  if err != nil {
-    fmt.Println(err)
-    fmt.Fprintf(w, `{"error":"invalid payload"}`)
     return
   }
 
-  switch event := event.(type) {
-  case *github.PullRequest:
-    stmt, err := db.Prepare("select secret from repos where slug like ?")
-    if err != nil {
-      fmt.Println(err)
-      fmt.Fprintf(w, `{"error":"database error"}`)
-      return
-    }
-    defer stmt.Close()
-
-    var secret string
-    err = stmt.QueryRow(event.Base.Repo.FullName).Scan(&secret)
-    if err != nil {
-      fmt.Println(err)
-      fmt.Fprintf(w, `{"error":"repo not registered"}`)
-      return
-    }
-
-    // validate payload
-    _, err = github.ValidatePayload(r, []byte(secret))
-    if err != nil {
-      fmt.Println(err)
-      fmt.Fprintf(w, `{"error":"invalid signature"}`)
-      return
-    }
-
-    matrix := []string{fmt.Sprintf(
-      `"PRREPO=%s PRSHA=%s"`,
-      event.Head.Repo.CloneURL,
-      event.Head.SHA,
-    )}
-    go triggerTravisBuild(matrix)
-    fmt.Fprintf(w, `{}`)
-  default:
-    fmt.Println("Not supported event type", event)
+  var event github.PullRequestReviewEvent
+  err = json.Unmarshal(b, &event)
+  if err != nil {
+    logger.Println("Not supported event type", string(b))
     fmt.Fprintf(w, `{"error":"unsupported event type"}`)
+    return
   }
+  pr := event.PullRequest
+  if *pr.State != "open" {
+    logger.Println("Ignore closed pull request")
+    fmt.Fprintf(w, `{}`)
+    return
+  }
+
+  var secret string
+  err = query(fmt.Sprintf("select secret from repos where slug like '%s';",
+    *pr.Base.Repo.FullName), &secret)
+  if err != nil {
+    logger.Println(err, *pr.Base.Repo.FullName)
+    fmt.Fprintf(w, `{"error":"repo not registered"}`)
+    return
+  }
+
+  // XXX validate payload
+  //_, err = github.ValidatePayload(r, []byte(secret))
+  //if err != nil {
+  //  logger.Println(err, secret)
+  //  fmt.Fprintf(w, `{"error":"invalid signature"}`)
+  //  return
+  //}
+
+  var token string
+  err = query(fmt.Sprintf("select token from repos where slug like '%s'",
+    *pr.Base.Repo.FullName), &token)
+  if err != nil {
+    logger.Println(err, *pr.Base.Repo.FullName)
+    fmt.Fprintf(w, `{"error":"repo not registered"}`)
+    return
+  }
+
+  var request TravisRequest
+  go request.Run(token, []string{fmt.Sprintf(
+    `"PRREPO=%s PRSHA=%s"`,
+    pr.Head.Repo.CloneURL,
+    pr.Head.SHA)}, pr)
+
+  fmt.Fprintf(w, `{}`)
 }

@@ -18,7 +18,7 @@
 package main
 
 import (
-  "fmt"
+  "log"
   "net/http"
   "golang.org/x/oauth2"
   oauth2Github "golang.org/x/oauth2/github"
@@ -27,16 +27,15 @@ import (
   "database/sql"
   _ "github.com/mattn/go-sqlite3"
   "flag"
+  "os"
 )
 
 var (
+  logger = log.New(os.Stdout, "", log.Ldate | log.Ltime | log.Lmicroseconds | log.Lshortfile)
   runes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890")
   travisToken, serverDomain string
-  travisEndpoint = "https://api.travis-ci.org/repo/"
-  travisSlug = "thefederationinfo%2Ffederation-tests"
-  travisRequests = travisEndpoint + travisSlug + "/requests"
   conf = &oauth2.Config{
-    Scopes: []string{"admin:repo_hook"},
+    Scopes: []string{"admin:repo_hook", "repo"},
     Endpoint: oauth2Github.Endpoint,
   }
 )
@@ -62,7 +61,7 @@ func init() {
 
   _, err = db.Exec(`create table repos(slug text, token text, secret text);`)
   if err != nil {
-    fmt.Println(err)
+    logger.Println(err)
   }
 }
 
@@ -84,6 +83,6 @@ func main() {
   http.HandleFunc("/", frontend)
   http.HandleFunc("/hook", webhook)
 
-  fmt.Println("Running webserver on :8080")
-  fmt.Println(http.ListenAndServe(":8080", nil))
+  logger.Println("Running webserver on 127.0.0.1:8181")
+  logger.Println(http.ListenAndServe("127.0.0.1:8181", nil))
 }
