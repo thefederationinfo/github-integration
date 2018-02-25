@@ -39,7 +39,7 @@ const (
 var (
   travisTestEndpoint = "https://travis-ci.org/thefederationinfo/federation-tests/builds/%d"
   travisTestDescription = "Continuous integration tests for the federation network"
-  travisTestContext = "Federation Test Suite"
+  travisTestContext = "Federation Suite"
   travisEndpoint = "https://api.travis-ci.org/repo/"
   travisSlug = "thefederationinfo%2Ffederation-tests"
   travisRequests = travisEndpoint + travisSlug + "/requests"

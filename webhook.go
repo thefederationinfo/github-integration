@@ -77,10 +77,12 @@ func webhook(w http.ResponseWriter, r *http.Request) {
   }
 
   var request TravisRequest
-  go request.Run(token, []string{fmt.Sprintf(
-    `"PRREPO=%s PRSHA=%s"`,
-    pr.Head.Repo.CloneURL,
-    pr.Head.SHA)}, pr)
+  go request.Run(token,
+    []string{fmt.Sprintf(
+      `"PRREPO=%s PRSHA=%s"`,
+      *pr.Head.Repo.CloneURL,
+      *pr.Head.SHA,
+    )}, pr)
 
   fmt.Fprintf(w, `{}`)
 }
