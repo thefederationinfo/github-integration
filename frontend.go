@@ -25,6 +25,7 @@ import (
   "database/sql"
   _ "github.com/mattn/go-sqlite3"
   "context"
+  "strings"
 )
 
 func frontend(w http.ResponseWriter, r *http.Request) {
@@ -47,6 +48,13 @@ func frontend(w http.ResponseWriter, r *http.Request) {
     tc := oauth2.NewClient(ctx, ts)
     client := github.NewClient(tc)
 
+    repoSlice := strings.Split(repo, "/")
+    if len(repoSlice) < 2 {
+      logger.Println("invalid repository string")
+      fmt.Fprintf(w, "Invalid Repository String :(")
+      return
+    }
+
     name := "web"
     secret := Secret(16)
     hook := github.Hook{
@@ -57,7 +65,7 @@ func frontend(w http.ResponseWriter, r *http.Request) {
       },
     }
 
-    _, _, err = client.Repositories.CreateHook(ctx, "ganggo", "ganggo", &hook)
+    _, _, err = client.Repositories.CreateHook(ctx, repoSlice[0], repoSlice[1], &hook)
     if err != nil {
       logger.Println(err)
       fmt.Fprintf(w, "Create Hook Failure :(")
@@ -72,7 +80,8 @@ func frontend(w http.ResponseWriter, r *http.Request) {
       return
     }
 
-    fmt.Fprintf(w, "Success :) You can undo it by simply revoking permissions on Github.")
+    fmt.Fprintf(w, `Success :) You can undo it by simply deleting the
+      <a href="https://github.com/%s/settings/hooks">webhook</a>.`, repo)
     return
   }
 
