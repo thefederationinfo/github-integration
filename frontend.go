@@ -60,6 +60,7 @@ func frontend(w http.ResponseWriter, r *http.Request) {
     hook := github.Hook{
       Name: &name, Events: []string{"pull_request"},
       Config: map[string]interface{}{
+        "content_type": "json",
         "url": serverDomain + "/hook",
         "secret": secret,
       },
@@ -80,8 +81,15 @@ func frontend(w http.ResponseWriter, r *http.Request) {
       return
     }
 
-    fmt.Fprintf(w, `Success :) You can undo it by simply deleting the
-      <a href="https://github.com/%s/settings/hooks">webhook</a>.`, repo)
+    fmt.Fprintf(w, `<!DOCTYPE html>
+      <html>
+      <body>
+        <p>
+          Success :) You can undo it by simply deleting the
+          <a href="https://github.com/%s/settings/hooks">webhook</a>.
+        </p>
+      </body>
+      </html>`, repo)
     return
   }
 

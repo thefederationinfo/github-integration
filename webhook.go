@@ -36,12 +36,14 @@ func webhook(w http.ResponseWriter, r *http.Request) {
 
   var event github.PullRequestReviewEvent
   err = json.Unmarshal(b, &event)
-  if err != nil {
+  pr := event.PullRequest
+  if err != nil || pr == nil {
     logger.Println("Not supported event type", string(b))
     fmt.Fprintf(w, `{"error":"unsupported event type"}`)
     return
   }
-  pr := event.PullRequest
+
+  // skip all events except for open PRs
   if *pr.State != "open" {
     logger.Println("Ignore closed pull request")
     fmt.Fprintf(w, `{}`)
