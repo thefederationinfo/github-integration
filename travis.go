@@ -88,10 +88,14 @@ func (request *TravisRequest) Run(token string, matrix []string, pr *github.Pull
       var passed int
       for _, build := range status.Builds {
         // canceled, passed, errored, started
-        if build.State == "canceled" || build.State == "errored" {
+        switch build.State {
+        case "canceled":
+          fallthrough
+        case "errored":
+          fallthrough
+        case "failed":
           failure = true
-        }
-        if build.State == "passed" {
+        case "passed":
           passed += 1
         }
       }
