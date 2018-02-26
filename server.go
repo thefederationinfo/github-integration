@@ -24,13 +24,15 @@ import (
   oauth2Github "golang.org/x/oauth2/github"
   "time"
   "math/rand"
-  "database/sql"
-  _ "github.com/mattn/go-sqlite3"
+  "github.com/jinzhu/gorm"
+  _ "github.com/jinzhu/gorm/dialects/sqlite"
   "flag"
   "os"
 )
 
 var (
+  databaseDriver = "sqlite3"
+  databaseDSN = "./server.db"
   logger = log.New(os.Stdout, "", log.Ldate | log.Ltime | log.Lmicroseconds | log.Lshortfile)
   runes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890")
   travisToken, serverDomain string
@@ -53,20 +55,19 @@ func init() {
   flag.StringVar(&conf.ClientSecret, "github-secret", "",
     "Specify the github client secret (required)")
 
-  db, err := sql.Open("sqlite3", "./server.db")
+  db, err := gorm.Open(databaseDriver, databaseDSN)
   if err != nil {
-    panic(err)
+    panic("failed to connect database")
   }
   defer db.Close()
 
-  _, err = db.Exec(`create table repos(slug text, token text, secret text);`)
-  if err != nil {
-    logger.Println(err)
-  }
-  _, err = db.Exec(`create unique index index_on_repos_slug on repos(slug);`)
-  if err != nil {
-    logger.Println(err)
-  }
+  build := &Build{}
+  db.Model(build).AddUniqueIndex("index_builds_on_repo_id_and_matrix", "repo_id", "matrix")
+  db.AutoMigrate(build)
+
+  repo := &Repo{}
+  db.Model(repo).AddUniqueIndex("index_repos_on_slug", "slug")
+  db.AutoMigrate(repo)
 }
 
 func Secret(n int) string {

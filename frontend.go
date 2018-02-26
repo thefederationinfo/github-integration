@@ -19,13 +19,13 @@ package main
 
 import (
   "net/http"
-  "database/sql"
-  _ "github.com/mattn/go-sqlite3"
+  "github.com/jinzhu/gorm"
+  _ "github.com/jinzhu/gorm/dialects/sqlite"
   "fmt"
 )
 
 func frontend(w http.ResponseWriter, r *http.Request) {
-  db, err := sql.Open("sqlite3", "./server.db")
+  db, err := gorm.Open(databaseDriver, databaseDSN)
   if err != nil {
     logger.Println(err)
     fmt.Fprintf(w, "Database Error :(")
@@ -33,25 +33,14 @@ func frontend(w http.ResponseWriter, r *http.Request) {
   }
   defer db.Close()
 
-  rows, err := db.Query("select slug from repos")
+  var repos Repos
+  err = db.Find(&repos).Error
   if err != nil {
     logger.Println(err)
     fmt.Fprintf(w, "Database Query Error :(")
     return
   }
-  defer rows.Close()
 
-  var slugs []string
-  for rows.Next() {
-    var slug string
-    err = rows.Scan(&slug)
-    if err != nil {
-      logger.Println(err)
-      fmt.Fprintf(w, "Database Scan Error :(")
-      continue
-    }
-    slugs = append(slugs, slug)
-  }
   fmt.Fprintf(w, `<!DOCTYPE html>
   <html>
   <head>
@@ -77,7 +66,7 @@ func frontend(w http.ResponseWriter, r *http.Request) {
         </tr>
       </thead>
       <tbody>`)
-    for i, slug := range slugs {
+    for i, repo := range repos {
       fmt.Fprintf(w, `
         <tr>
           <th scope="row">%d</th>
@@ -85,7 +74,7 @@ func frontend(w http.ResponseWriter, r *http.Request) {
           <td>
             <a href="https://github.com/%s">Details</a>
           </td>
-        </tr>`, i+1, slug, slug)
+        </tr>`, i+1, repo.Slug, repo.Slug)
     }
     fmt.Fprintf(w, `
       </tbody>

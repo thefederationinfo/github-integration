@@ -22,8 +22,8 @@ import (
   "net/http"
   "golang.org/x/oauth2"
   "github.com/google/go-github/github"
-  "database/sql"
-  _ "github.com/mattn/go-sqlite3"
+  "github.com/jinzhu/gorm"
+  _ "github.com/jinzhu/gorm/dialects/sqlite"
   "context"
   "strings"
 )
@@ -33,7 +33,7 @@ func authentication(w http.ResponseWriter, r *http.Request) {
   accessToken := r.URL.Query().Get("access_token")
   repo := r.URL.Query().Get("repo")
   if accessToken != "" && repo != "" {
-    db, err := sql.Open("sqlite3", "./server.db")
+    db, err := gorm.Open(databaseDriver, databaseDSN)
     if err != nil {
       logger.Println(err)
       fmt.Fprintf(w, "Database Failure :(")
@@ -56,9 +56,13 @@ func authentication(w http.ResponseWriter, r *http.Request) {
     }
 
     secret := Secret(16)
-    _, err = db.Exec(fmt.Sprintf(`insert into repos(slug, token, secret)
-      values('%s', '%s', '%s');`, repo, accessToken, secret,
-    )); if err != nil {
+    repo := Repo{
+      Slug: repo,
+      Token: accessToken,
+      Secret: secret,
+    }
+    err = db.Create(&repo).Error
+    if err != nil {
       logger.Println(err)
       fmt.Fprintf(w, "Database Insert Failure :(\n%s",
         "(the project probably already exists)")

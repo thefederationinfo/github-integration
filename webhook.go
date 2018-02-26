@@ -23,10 +23,20 @@ import (
   "github.com/google/go-github/github"
   "io/ioutil"
   "encoding/json"
+  "github.com/jinzhu/gorm"
+  _ "github.com/jinzhu/gorm/dialects/sqlite"
 )
 
 func webhook(w http.ResponseWriter, r *http.Request) {
+  db, err := gorm.Open(databaseDriver, databaseDSN)
+  if err != nil {
+    logger.Println(err)
+    fmt.Fprintf(w, `{"error":"database error"}`)
+    return
+  }
+  defer db.Close()
   defer r.Body.Close()
+
   b, err := ioutil.ReadAll(r.Body)
   if err != nil {
     logger.Println(err)
@@ -50,9 +60,8 @@ func webhook(w http.ResponseWriter, r *http.Request) {
     return
   }
 
-  var secret string
-  err = query(fmt.Sprintf("select secret from repos where slug like '%s';",
-    *pr.Base.Repo.FullName), &secret)
+  var repo Repo
+  err = db.Where("slug = ?", *pr.Base.Repo.FullName).Find(&repo).Error
   if err != nil {
     logger.Println(err, *pr.Base.Repo.FullName)
     fmt.Fprintf(w, `{"error":"repo not registered"}`)
@@ -60,24 +69,15 @@ func webhook(w http.ResponseWriter, r *http.Request) {
   }
 
   // XXX validate payload
-  //_, err = github.ValidatePayload(r, []byte(secret))
+  //_, err = github.ValidatePayload(r, []byte(repo.Secret))
   //if err != nil {
-  //  logger.Println(err, secret)
+  //  logger.Println(err, repo.Secret)
   //  fmt.Fprintf(w, `{"error":"invalid signature"}`)
   //  return
   //}
 
-  var token string
-  err = query(fmt.Sprintf("select token from repos where slug like '%s'",
-    *pr.Base.Repo.FullName), &token)
-  if err != nil {
-    logger.Println(err, *pr.Base.Repo.FullName)
-    fmt.Fprintf(w, `{"error":"repo not registered"}`)
-    return
-  }
-
   var request TravisRequest
-  go request.Run(token,
+  go request.Run(repo.Token,
     []string{fmt.Sprintf(
       `"PRREPO=%s PRSHA=%s"`,
       *pr.Head.Repo.CloneURL,
