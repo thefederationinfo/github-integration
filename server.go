@@ -80,7 +80,7 @@ func main() {
     return
   }
 
-  http.HandleFunc("/", frontend)
+  http.HandleFunc("/auth", authentication)
   http.HandleFunc("/hook", webhook)
 
   logger.Println("Running webserver on 127.0.0.1:8181")

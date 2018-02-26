@@ -28,7 +28,7 @@ import (
   "strings"
 )
 
-func frontend(w http.ResponseWriter, r *http.Request) {
+func authentication(w http.ResponseWriter, r *http.Request) {
   ctx := context.Background()
   accessToken := r.URL.Query().Get("access_token")
   repo := r.URL.Query().Get("repo")
