@@ -79,7 +79,8 @@ func webhook(w http.ResponseWriter, r *http.Request) {
   build := Build{
     RepoID: repo.ID,
     Matrix: fmt.Sprintf(
-      `"PRREPO=%s PRSHA=%s"`,
+      `"PROJECT=%s PRREPO=%s PRSHA=%s"`,
+      *pr.Base.User.Login,
       *pr.Head.Repo.CloneURL,
       *pr.Head.SHA,
     ),
