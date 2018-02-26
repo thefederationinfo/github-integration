@@ -50,7 +50,6 @@ type TravisStatus struct {
   Builds []struct {
     ID int64 `json:"id"`
     State string `json:"state"`
-    Duration string `json:"duration"`
   } `json:"builds"`
 }
 
