@@ -63,6 +63,10 @@ func init() {
   if err != nil {
     logger.Println(err)
   }
+  _, err = db.Exec(`create unique index index_on_repos_slug on repos(slug);`)
+  if err != nil {
+    logger.Println(err)
+  }
 }
 
 func Secret(n int) string {

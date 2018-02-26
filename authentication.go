@@ -55,8 +55,17 @@ func authentication(w http.ResponseWriter, r *http.Request) {
       return
     }
 
-    name := "web"
     secret := Secret(16)
+    _, err = db.Exec(fmt.Sprintf(`insert into repos(slug, token, secret)
+      values('%s', '%s', '%s');`, repo, accessToken, secret,
+    )); if err != nil {
+      logger.Println(err)
+      fmt.Fprintf(w, "Database Insert Failure :(\n%s",
+        "(the project probably already exists)")
+      return
+    }
+
+    name := "web"
     hook := github.Hook{
       Name: &name, Events: []string{"pull_request"},
       Config: map[string]interface{}{
@@ -70,14 +79,6 @@ func authentication(w http.ResponseWriter, r *http.Request) {
     if err != nil {
       logger.Println(err)
       fmt.Fprintf(w, "Create Hook Failure :(")
-      return
-    }
-
-    _, err = db.Exec(fmt.Sprintf(`insert into repos(slug, token, secret)
-      values('%s', '%s', '%s');`, repo, accessToken, secret,
-    )); if err != nil {
-      logger.Println(err)
-      fmt.Fprintf(w, "Database Insert Failure :(")
       return
     }
 
