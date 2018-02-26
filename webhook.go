@@ -76,13 +76,23 @@ func webhook(w http.ResponseWriter, r *http.Request) {
   //  return
   //}
 
-  var request TravisRequest
-  go request.Run(repo.Token,
-    []string{fmt.Sprintf(
+  build := Build{
+    RepoID: repo.ID,
+    Matrix: fmt.Sprintf(
       `"PRREPO=%s PRSHA=%s"`,
       *pr.Head.Repo.CloneURL,
       *pr.Head.SHA,
-    )}, pr)
+    ),
+    PRUser: *pr.Head.User.Login,
+    PRRepo: *pr.Head.Repo.Name,
+    PRSha: *pr.Head.SHA,
+  }
+  err = db.Create(&build).Error
+  if err != nil {
+    logger.Println(err)
+    fmt.Fprintf(w, `{"error":"database error"}`)
+    return
+  }
 
   fmt.Fprintf(w, `{}`)
 }

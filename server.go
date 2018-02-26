@@ -85,6 +85,9 @@ func main() {
     return
   }
 
+  // start build agent
+  go BuildAgent()
+
   http.HandleFunc("/", frontend)
   http.HandleFunc("/auth", authentication)
   http.HandleFunc("/hook", webhook)
