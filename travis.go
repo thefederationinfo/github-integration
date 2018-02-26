@@ -76,12 +76,13 @@ func (request *TravisRequest) Run(token string, matrix []string, pr *github.Pull
     return
   }
 
-  startedJobs := 0
+  var statusHref string
   started := time.Now()
   timeout := started.Add(-1 * time.Hour)
   logger.Printf("#%d: Travis build triggered\n", request.Request.ID)
   for {
     status := request.Status()
+    logger.Printf("#%d: request status: %+v", request.Request.ID, status)
     if status.State == "finished" {
       var failure bool
       var passed int
@@ -95,20 +96,20 @@ func (request *TravisRequest) Run(token string, matrix []string, pr *github.Pull
         }
       }
       if failure {
-        request.UpdateStatus(client, pr, STATUS_FAIL)
+        request.UpdateStatus(client, pr, STATUS_FAIL, statusHref)
       } else if len(status.Builds) == passed {
-        request.UpdateStatus(client, pr, STATUS_SUCCESS)
+        request.UpdateStatus(client, pr, STATUS_SUCCESS, statusHref)
         break
       }
       // update the status lin in the PR once
-      if len(status.Builds) > 0 && startedJobs == 0 {
-        request.UpdateStatus(client, pr, STATUS_PENDING,
-          fmt.Sprintf(travisTestEndpoint, status.Builds[0].ID))
-        startedJobs = len(status.Builds)
+      if len(status.Builds) > 0 && statusHref == "" {
+        statusHref = fmt.Sprintf(travisTestEndpoint, status.Builds[0].ID)
+        request.UpdateStatus(client, pr, STATUS_PENDING, statusHref)
       }
     }
 
     if time.Now().Before(timeout) {
+      request.UpdateStatus(client, pr, STATUS_ERROR, statusHref)
       logger.Printf("#%d: Timeout..\n", request.Request.ID)
       break
     }
