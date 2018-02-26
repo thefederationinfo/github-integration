@@ -80,6 +80,7 @@ func main() {
     return
   }
 
+  http.HandleFunc("/", frontend)
   http.HandleFunc("/auth", authentication)
   http.HandleFunc("/hook", webhook)
 
