@@ -92,6 +92,6 @@ func main() {
   http.HandleFunc("/auth", authentication)
   http.HandleFunc("/hook", webhook)
 
-  logger.Println("Running webserver on 127.0.0.1:8181")
-  logger.Println(http.ListenAndServe("127.0.0.1:8181", nil))
+  logger.Println("Running webserver on :8181")
+  logger.Println(http.ListenAndServe(":8181", nil))
 }
