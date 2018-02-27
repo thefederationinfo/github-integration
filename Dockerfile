@@ -7,7 +7,7 @@ RUN apt-get install -y curl
 
 RUN useradd -ms /bin/bash user
 
-RUN curl -o /usr/local/bin/github-integration -L https://github.com/thefederationinfo/github-integration/releases/download/v1.0.2/github-integration.$(uname -m)
+RUN curl -o /usr/local/bin/github-integration -L https://github.com/thefederationinfo/github-integration/releases/download/v1.0.3/github-integration.$(uname -m)
 
 RUN apt-get purge -y curl
 RUN apt-get autoremove -y
