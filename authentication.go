@@ -32,7 +32,9 @@ func authentication(w http.ResponseWriter, r *http.Request) {
   ctx := context.Background()
   accessToken := r.URL.Query().Get("access_token")
   repo := r.URL.Query().Get("repo")
-  if accessToken != "" && repo != "" {
+  project := r.URL.Query().Get("project")
+
+  if accessToken != "" && repo != "" && project != "" {
     db, err := gorm.Open(databaseDriver, databaseDSN)
     if err != nil {
       logger.Println(err)
@@ -57,6 +59,7 @@ func authentication(w http.ResponseWriter, r *http.Request) {
 
     secret := Secret(16)
     repo := Repo{
+      Project: project,
       Slug: repo,
       Token: accessToken,
       Secret: secret,
@@ -111,7 +114,9 @@ func authentication(w http.ResponseWriter, r *http.Request) {
         <p>You are authenticated :) Please add your repository:</p>
         <form method="GET">
           <input type="hidden" name="access_token" value="%s" />
+          <input type="text" name="project" placeholder="ganggo" />
           <input type="text" name="repo" placeholder="user/repository" />
+          <input type="submit" style="display:none" />
         </form>
         </body>
         </html>`, tok.AccessToken)

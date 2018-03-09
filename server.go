@@ -66,7 +66,8 @@ func init() {
   db.AutoMigrate(build)
 
   repo := &Repo{}
-  db.Model(repo).AddUniqueIndex("index_repos_on_slug", "slug")
+  db.Model(repo).AddUniqueIndex("index_repos_on_project_and_slug", "project", "slug")
+  db.Model(repo).AddIndex("index_repos_on_slug", "slug")
   db.AutoMigrate(repo)
 }
 

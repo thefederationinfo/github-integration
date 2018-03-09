@@ -23,6 +23,7 @@ import (
 
 type Repo struct {
   gorm.Model
+  Project string
   Slug string
   Token string
   Secret string
