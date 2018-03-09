@@ -50,12 +50,13 @@ func frontend(w http.ResponseWriter, r *http.Request) {
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
   </head>
   <body>
-    <div class="container">
-    <h1 class="pt-5">Federation Testsuite</h1>
-    <h4>How to add your project to the list</h2>
+    <div class="container" role="main">
+    <h1>Federation Testsuite</h1>
+    <h2>How to add your project to the list</h2>
     <p class="mb-0">Follow the <a href="https://github.com/thefederationinfo/federation-tests/blob/master/README.md">instructions</a> and add your own image to the repository.</p>
     <p>Then register your project with the <a href="/auth">integration service</a>.</p>
-    <h4>Covered Projects</h2>
+    <p><img class="img-thumbnail" src="/images/stats/builds.png" title="Builds" /></p>
+    <h3>Covered Projects</h3>
     <p>Following projects are covered by our <a href="https://github.com/thefederationinfo/federation-tests">continuous integration tests</a>:</p>
     <table class="table">
       <thead>

@@ -40,6 +40,7 @@ const (
   BUILD_NOT_STARTED = 0
   BUILD_PENDING = 1
   BUILD_FINISHED = 2
+  BUILD_FINISHED_ERROR = 3
 )
 
 type Build struct {
@@ -174,7 +175,7 @@ func (build *Build) Run(watch bool) {
       }
       if failure {
         build.UpdateStatus(client, STATUS_FAIL, statusHref)
-        (*build).Status = BUILD_FINISHED
+        (*build).Status = BUILD_FINISHED_ERROR
         err := db.Save(&build).Error
         if err != nil {
           logger.Printf("#%d: cannot update status: %+v\n", build.ID, err)

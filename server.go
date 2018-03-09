@@ -89,6 +89,7 @@ func main() {
   go BuildAgent()
 
   http.HandleFunc("/", frontend)
+  http.HandleFunc("/images/stats/builds.png", buildsPNG)
   http.HandleFunc("/auth", authentication)
   http.HandleFunc("/hook", webhook)
 
