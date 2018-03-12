@@ -213,7 +213,19 @@ func (build *Build) Run(watch bool) {
 }
 
 func (build *Build) TriggerTravis() string {
-  var requestJson = `{"request":{"branch":"continuous_integration","config":{"env":{"matrix":[%s]}}}}`
+  var requestJson = `{"request": {
+    "branch": "continuous_integration",
+    "config": {
+      "merge_mode": "replace",
+      "sudo": "required",
+      "language": "go",
+      "services": ["postgresql", "docker", "redis"],
+      "env": {"matrix": [%s]},
+      "install": "bash scripts/install.sh",
+      "script": "bats --tap $(find . -name $PROJECT'*.bats')"
+    }
+  }}`
+
   resp, err := build.fetch("POST", travisRequests,
     fmt.Sprintf(requestJson, build.Matrix))
   if err != nil {
