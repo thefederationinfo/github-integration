@@ -269,8 +269,15 @@ func (build *Build) UpdateStatus(client *github.Client, params... string) {
   if len(params) >= 2 {
     repoStatus.TargetURL = &params[1]
   }
+
+  slug := strings.Split(build.Repo.Slug, "/")
+  if len(slug) <= 1 {
+    fmt.Printf("#%d: Invalid repor slug: %s\n", build.ID, build.Repo.Slug)
+    return
+  }
+
   if _, _, err := client.Repositories.CreateStatus(context.Background(),
-  build.PRUser, build.PRRepo, build.PRSha, &repoStatus); err != nil {
+  slug[0], slug[1], build.PRSha, &repoStatus); err != nil {
     fmt.Printf("#%d: Cannot update status: %+v\n", build.ID, err)
   }
 }
