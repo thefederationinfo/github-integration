@@ -122,7 +122,7 @@ func BuildAgent() {
       }
     }
   }
-  logger.Println("Build agent died :S\n")
+  logger.Println("Build agent died :S")
 }
 
 func (build *Build) Run(watch bool) {
@@ -231,21 +231,21 @@ func (build *Build) TriggerTravis() string {
   resp, err := build.fetch("POST", travisRequests,
     fmt.Sprintf(requestJson, build.Matrix))
   if err != nil {
-    fmt.Println("#%d: Cannot create request: %+v", build.ID, err)
+    fmt.Printf("#%d: Cannot create request: %+v\n", build.ID, err)
     return STATUS_ERROR
   }
   defer resp.Body.Close()
 
   b, err := ioutil.ReadAll(resp.Body)
   if err != nil {
-    fmt.Println("#%d: Cannot read status body: %+v", build.ID, err)
+    fmt.Printf("#%d: Cannot read status body: %+v\n", build.ID, err)
     return STATUS_ERROR
   }
 
   var request TravisRequest
   err = json.Unmarshal(b, &request)
   if err != nil {
-    fmt.Println("#%d: Cannot unmarshal body: %+v <> %s", build.ID, err, string(b))
+    fmt.Printf("#%d: Cannot unmarshal body: %+v <> %s\n", build.ID, err, string(b))
     return STATUS_ERROR
   }
 
@@ -271,7 +271,7 @@ func (build *Build) UpdateStatus(client *github.Client, params... string) {
   }
   if _, _, err := client.Repositories.CreateStatus(context.Background(),
   build.PRUser, build.PRRepo, build.PRSha, &repoStatus); err != nil {
-    fmt.Println("#%d: Cannot update status: %+v", build.ID, err)
+    fmt.Printf("#%d: Cannot update status: %+v\n", build.ID, err)
   }
 }
 
