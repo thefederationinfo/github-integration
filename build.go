@@ -100,10 +100,13 @@ func BuildAgent() {
   defer db.Close()
 
   for {
+    // sleep for a bit before continuing
+    time.Sleep(10 * time.Second)
+
     var builds Builds
     err := db.Find(&builds).Error
     if err != nil {
-      logger.Printf("Cannot fetch new builds: %+v\n", err)
+      //logger.Printf("Cannot fetch new builds: %+v\n", err)
       continue
     }
     for _, build := range builds {
@@ -118,7 +121,6 @@ func BuildAgent() {
         go build.Run(false)
       }
     }
-    time.Sleep(10 * time.Second)
   }
   logger.Println("Build agent died :S\n")
 }
