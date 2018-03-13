@@ -37,7 +37,7 @@ var (
   runes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890")
   travisToken, serverDomain string
   conf = &oauth2.Config{
-    Scopes: []string{"admin:repo_hook", "repo"},
+    Scopes: []string{"admin:repo_hook", "repo:status"},
     Endpoint: oauth2Github.Endpoint,
   }
 )
