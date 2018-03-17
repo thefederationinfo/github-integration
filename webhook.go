@@ -105,8 +105,8 @@ func webhook(w http.ResponseWriter, r *http.Request) {
 
     if !flagExists {
       // last but not least check the commit message for flags
-      var prService github.PullRequestsService
-      commits, _, err := prService.ListCommits(context.Background(),
+      client := github.NewClient(nil)
+      commits, _, err := client.PullRequests.ListCommits(context.Background(),
         pr.GetHead().GetUser().GetLogin(),
         pr.GetHead().GetRepo().GetName(),
         pr.GetNumber(), &github.ListOptions{})
