@@ -14,7 +14,8 @@ WORKDIR $GOPATH/src/github.com/thefederationinfo/github-integration
 
 RUN go get ./... && go build
 RUN mv github-integration /usr/local/bin/github-integration
-RUN mv templates /home/user && chown -R user:user templates
+RUN mv templates /home/user && \
+  chown -R user:user /home/user/templates
 
 RUN apt-get purge -y git-core
 RUN apt-get clean && apt-get autoclean
