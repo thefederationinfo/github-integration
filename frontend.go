@@ -21,14 +21,46 @@ import (
   "net/http"
   "github.com/jinzhu/gorm"
   _ "github.com/jinzhu/gorm/dialects/sqlite"
+  "html/template"
   "fmt"
+  "golang.org/x/oauth2"
+  "github.com/google/go-github/github"
+  "context"
+  "strings"
 )
 
-func frontend(w http.ResponseWriter, r *http.Request) {
+func add(a, b int) int {
+  return a + b
+}
+
+func render(w http.ResponseWriter, name string, s interface{}) {
+  rootTmpl := template.New("").Funcs(template.FuncMap{
+    "add": add,
+  })
+
+  tmpl, err := rootTmpl.ParseFiles(
+    "templates/header.html",
+    fmt.Sprintf("templates/%s", name),
+    "templates/footer.html",
+  ); if err != nil {
+    logger.Println(err)
+    fmt.Fprintf(w, "Wasn't able to parse the template")
+    return
+  }
+
+  err = tmpl.ExecuteTemplate(w, name, s)
+  if err != nil {
+    logger.Println(err)
+    fmt.Fprintf(w, "Wasn't able to execute the template")
+    return
+  }
+}
+
+func indexPage(w http.ResponseWriter, r *http.Request) {
   db, err := gorm.Open(databaseDriver, databaseDSN)
   if err != nil {
     logger.Println(err)
-    fmt.Fprintf(w, "Database Error :(")
+    render(w, "error.html", "Cannot connect to database")
     return
   }
   defer db.Close()
@@ -37,53 +69,96 @@ func frontend(w http.ResponseWriter, r *http.Request) {
   err = db.Find(&repos).Error
   if err != nil {
     logger.Println(err)
-    fmt.Fprintf(w, "Database Query Error :(")
+    render(w, "error.html", "No repositories found")
     return
   }
 
-  fmt.Fprintf(w, `<!DOCTYPE html>
-  <html>
-  <head>
-    <title>Federation Testsuite</title>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
-  </head>
-  <body>
-    <div class="container" role="main">
-    <h1>Federation Testsuite</h1>
-    <h2>How to add your project to the list</h2>
-    <p class="mb-0">Follow the <a href="https://github.com/thefederationinfo/federation-tests/blob/master/README.md">instructions</a> and add your own image to the repository.</p>
-    <p>Then register your project with the <a href="/auth">integration service</a>.</p>
-    <p><img class="img-thumbnail" src="/images/stats/builds.png" title="Builds" /></p>
-    <h3>Covered Projects</h3>
-    <p>Following projects are covered by our <a href="https://github.com/thefederationinfo/federation-tests">continuous integration tests</a>:</p>
-    <table class="table">
-      <thead>
-        <tr>
-          <th scope="col">#</th>
-          <th scope="col">Slug</th>
-          <th scope="col">Project</th>
-        </tr>
-      </thead>
-      <tbody>`)
-    for i, repo := range repos {
-      fmt.Fprintf(w, `
-        <tr>
-          <th scope="row">%d</th>
-          <td>%s</td>
-          <td>
-            <a href="https://github.com/%s">Details</a>
-          </td>
-        </tr>`, i+1, repo.Slug, repo.Slug)
+  render(w, "index.html", repos)
+}
+
+func resultPage(w http.ResponseWriter, r *http.Request) {
+  accessToken := r.URL.Query().Get("access_token")
+  repo := r.URL.Query().Get("repo")
+  project := r.URL.Query().Get("project")
+
+  if accessToken != "" && repo != "" && project != "" {
+    db, err := gorm.Open(databaseDriver, databaseDSN)
+    if err != nil {
+      logger.Println(err)
+      render(w, "error.html", "Cannot connect to database")
+      return
     }
-    fmt.Fprintf(w, `
-      </tbody>
-    </table>
-    </div>
-    <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
-    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
-  </body>
-  </html>`)
+    defer db.Close()
+
+    ctx := context.Background()
+    ts := oauth2.StaticTokenSource(
+      &oauth2.Token{AccessToken: accessToken},
+    )
+    tc := oauth2.NewClient(ctx, ts)
+    client := github.NewClient(tc)
+
+    repoSlice := strings.Split(repo, "/")
+    if len(repoSlice) < 2 {
+      logger.Println("invalid repository string")
+      render(w, "error.html", "Invalid repository string")
+      return
+    }
+
+    secret := Secret(16)
+    repo := Repo{
+      Project: project,
+      Slug: repo,
+      Token: accessToken,
+      Secret: secret,
+    }
+
+    name := "web"
+    hook := github.Hook{
+      Name: &name, Events: []string{"pull_request"},
+      Config: map[string]interface{}{
+        "content_type": "json",
+        "url": serverDomain + "/hook",
+        "secret": secret,
+      },
+    }
+
+    if !devMode {
+      _, _, err = client.Repositories.CreateHook(ctx, repoSlice[0], repoSlice[1], &hook)
+      if err != nil {
+        logger.Println(err)
+        render(w, "error.html", "Cannot create the repository hook")
+        return
+      }
+
+      err = db.Create(&repo).Error
+      if err != nil {
+        logger.Println(err)
+        render(w, "error.html", "Cannot insert into database (probably the project already exists)")
+        return
+      }
+    }
+
+    render(w, "result.html", repo.Slug)
+  } else {
+    render(w, "error.html", "Missing parameters: access_token, repo or project")
+  }
+}
+
+func authenticationPage(w http.ResponseWriter, r *http.Request) {
+  code := r.URL.Query().Get("code")
+  if code != "" {
+    tok, err := conf.Exchange(context.Background(), code)
+    if !devMode && err != nil {
+      render(w, "error.html", "Invalid token")
+    } else {
+      var token string = "1234"
+      if !devMode {
+        token = tok.AccessToken
+      }
+      render(w, "auth.html", token)
+    }
+  } else {
+    url := conf.AuthCodeURL("state", oauth2.AccessTypeOffline)
+    http.Redirect(w, r, url, http.StatusMovedPermanently)
+  }
 }

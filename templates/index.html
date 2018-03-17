@@ -1,0 +1,37 @@
+{{define "index.html"}}
+
+{{template "header.html"}}
+
+<div class="container">
+  <h1>Federation Testsuite</h1>
+  <h2>How to add your project to the list</h2>
+  <p class="mb-0">Follow the <a href="https://github.com/thefederationinfo/federation-tests/blob/master/README.md">instructions</a> and add your own image to the repository.</p>
+  <p>Then register your project with the <a href="/auth">integration service</a>.</p>
+  <p><img class="img-thumbnail" src="/images/stats/builds.png" title="Builds" /></p>
+  <h3>Covered Projects</h3>
+  <p>Following projects are covered by our <a href="https://github.com/thefederationinfo/federation-tests">continuous integration tests</a>:</p>
+  <table class="table">
+    <thead>
+      <tr>
+        <th scope="col">#</th>
+        <th scope="col">Slug</th>
+        <th scope="col">Project</th>
+      </tr>
+    </thead>
+    <tbody>
+    {{range $i, $repo := .}}
+      <tr>
+        <th scope="row">{{add $i 1}}</th>
+        <td>{{$repo.Slug}}</td>
+        <td>
+          <a href="https://github.com/{{$repo.Slug}}">Details</a>
+        </td>
+      </tr>
+    {{end}}
+    </tbody>
+  </table>
+</div>
+
+{{template "footer.html"}}
+
+{{end}}
