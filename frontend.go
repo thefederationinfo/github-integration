@@ -104,18 +104,25 @@ func resultPage(w http.ResponseWriter, r *http.Request) {
       return
     }
 
-    var optIn bool
-    if strings.ToUpper(r.URL.Query().Get("optin")) == "ON" {
-      optIn = true
-    }
-
     secret := Secret(16)
     repo := Repo{
       Project: project,
       Slug: repo,
       Token: accessToken,
       Secret: secret,
-      OptIn: optIn,
+    }
+
+    // set the repo to opt-in
+    if strings.ToUpper(r.URL.Query().Get("optin")) == "ON" {
+      repo.OptIn = true
+    }
+    // define custom opt-in flag
+    if r.URL.Query().Get("optinFlag") != "" {
+      repo.OptInFlag = r.URL.Query().Get("optinFlag")
+    }
+    // define custom opt-out flag
+    if r.URL.Query().Get("optoutFlag") != "" {
+      repo.OptOutFlag = r.URL.Query().Get("optoutFlag")
     }
 
     name := "web"

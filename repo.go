@@ -28,6 +28,8 @@ type Repo struct {
   Token string
   Secret string
   OptIn bool
+  OptInFlag string `gorm:"default:'ci'"`
+  OptOutFlag string `gorm:"default:'ci skip'"`
 }
 
 type Repos []Repo

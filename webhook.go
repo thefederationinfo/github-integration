@@ -81,9 +81,9 @@ func webhook(w http.ResponseWriter, r *http.Request) {
   //}
 
   var flagExists = false
-  var buildFlag = "ci skip"
+  var buildFlag = repo.OptOutFlag
   if repo.OptIn {
-    buildFlag = "ci"
+    buildFlag = repo.OptInFlag
   }
 
   // check PR title and body for [ci] or [ci skip] flag
