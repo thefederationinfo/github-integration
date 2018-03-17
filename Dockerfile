@@ -1,24 +1,18 @@
 FROM golang:1.9
 
 ENV DEBIAN_FRONTEND noninteractive
-
-RUN apt-get update
-RUN apt-get install -y git-core
-RUN apt-get clean && apt-get autoclean
+ENV GI_DIR $GOPATH/src/github.com/thefederationinfo/github-integration
 
 RUN useradd -ms /bin/bash user
 
-RUN git clone --depth 1 https://github.com/thefederationinfo/github-integration.git \
-  $GOPATH/src/github.com/thefederationinfo/github-integration
-WORKDIR $GOPATH/src/github.com/thefederationinfo/github-integration
+RUN mkdir -p $GI_DIR
+COPY . $GI_DIR
+WORKDIR $GI_DIR
 
 RUN go get ./... && go build
 RUN mv github-integration /usr/local/bin/github-integration
 RUN mv templates /home/user && \
   chown -R user:user /home/user/templates
-
-RUN apt-get purge -y git-core
-RUN apt-get clean && apt-get autoclean
 RUN rm -rv $GOPATH/src/*
 
 USER user
