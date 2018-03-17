@@ -27,6 +27,7 @@ type Repo struct {
   Slug string
   Token string
   Secret string
+  OptIn bool
 }
 
 type Repos []Repo

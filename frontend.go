@@ -104,12 +104,18 @@ func resultPage(w http.ResponseWriter, r *http.Request) {
       return
     }
 
+    var optIn bool
+    if strings.ToUpper(r.URL.Query().Get("optin")) == "ON" {
+      optIn = true
+    }
+
     secret := Secret(16)
     repo := Repo{
       Project: project,
       Slug: repo,
       Token: accessToken,
       Secret: secret,
+      OptIn: optIn,
     }
 
     name := "web"

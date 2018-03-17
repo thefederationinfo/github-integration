@@ -15,6 +15,16 @@
       <input type="text" class="form-control" id="repoInput" name="repo" aria-describedby="repoHelp" placeholder="Enter your project slug">
       <small id="repoHelp" class="form-text text-muted">Your project slug is the Github user- and repository name separated by a slash e.g. ganggo/federation</small>
     </div>
+    <div class="form-check mb-3">
+      <input type="checkbox" class="form-check-input" id="optinInput" name="optin" describedby="optinHelp">
+      <label class="form-check-label" for="optinInput">Check if you want to opt-in on a new test</label>
+      <small id="optinHelp" class="form-text text-muted">
+        That would mean that tests are triggered if you specify <code>[ci]</code> in the PR title, message
+        or if the PR was tagged with <span class="badge badge-primary">ci</span>. If you leave the box unchecked
+        tests will be triggered on every pull-request. However you can skip them by writing <code>[ci skip]</code> in the PR title,
+        message or if the PR was tagged with <span class="badge badge-primary">ci skip</span>.
+      </small>
+    </div>
     <button type="submit" class="btn btn-primary">Submit</button>
   </form>
 </div>

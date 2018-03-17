@@ -25,6 +25,7 @@ import (
   "encoding/json"
   "github.com/jinzhu/gorm"
   _ "github.com/jinzhu/gorm/dialects/sqlite"
+  "strings"
 )
 
 func webhook(w http.ResponseWriter, r *http.Request) {
@@ -75,6 +76,46 @@ func webhook(w http.ResponseWriter, r *http.Request) {
   //  fmt.Fprintf(w, `{"error":"invalid signature"}`)
   //  return
   //}
+
+  var flagExists = false
+  var buildFlag = "ci skip"
+  if repo.OptIn {
+    buildFlag = "ci"
+  }
+
+  // check PR title and body for [ci] or [ci skip] flag
+  if pr.Title != nil && pr.Body != nil &&
+  strings.Contains(strings.ToLower(*pr.Title),
+      fmt.Sprintf("[%s]", buildFlag)) &&
+  strings.Contains(strings.ToLower(*pr.Body),
+      fmt.Sprintf("[%s]", buildFlag)) {
+    flagExists = true
+  }
+
+  if !flagExists {
+    // check labels for build flag if we haven't already found it
+    for _, label := range pr.Labels {
+      if label.Name != nil && strings.Contains(
+          strings.ToLower(*label.Name), buildFlag) {
+        flagExists = true
+        break
+      }
+    }
+  }
+
+  // ignoring pull-request! Repository is set
+  // to opt-in and no build flag was found
+  if repo.OptIn && !flagExists {
+    fmt.Fprintf(w, `{}`)
+    return
+  }
+
+  // ignoring pull-request! Repository is set
+  // to opt-out and a skip flag was found
+  if !repo.OptIn && flagExists {
+    fmt.Fprintf(w, `{}`)
+    return
+  }
 
   build := Build{
     RepoID: repo.ID,
