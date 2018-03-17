@@ -1,19 +1,24 @@
-FROM debian:jessie
+FROM golang:1.9
 
 ENV DEBIAN_FRONTEND noninteractive
 
 RUN apt-get update
-RUN apt-get install -y curl
+RUN apt-get install -y git-core
+RUN apt-get clean && apt-get autoclean
 
 RUN useradd -ms /bin/bash user
 
-RUN curl -o /usr/local/bin/github-integration -L https://github.com/thefederationinfo/github-integration/releases/download/v1.0.3/github-integration.$(uname -m)
+RUN git clone --depth 1 https://github.com/thefederationinfo/github-integration.git \
+  $GOPATH/src/github.com/thefederationinfo/github-integration
+WORKDIR $GOPATH/src/github.com/thefederationinfo/github-integration
 
-RUN apt-get purge -y curl
-RUN apt-get autoremove -y
+RUN go get ./...
+RUN go build
+RUN mv github-integration /usr/local/bin/github-integration
+
+RUN apt-get purge -y git-core
 RUN apt-get clean && apt-get autoclean
-
-RUN chmod +x /usr/local/bin/github-integration
+RUN rm -rv $GOPATH/src/*
 
 USER user
 WORKDIR /home/user

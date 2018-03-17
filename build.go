@@ -122,7 +122,6 @@ func BuildAgent() {
       }
     }
   }
-  logger.Println("Build agent died :S")
 }
 
 func (build *Build) Run(watch bool) {
