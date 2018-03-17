@@ -26,6 +26,7 @@ import (
   "github.com/jinzhu/gorm"
   _ "github.com/jinzhu/gorm/dialects/sqlite"
   "strings"
+  "context"
 )
 
 func webhook(w http.ResponseWriter, r *http.Request) {
@@ -55,16 +56,18 @@ func webhook(w http.ResponseWriter, r *http.Request) {
   }
 
   // skip all events except for open PRs
-  if *pr.State != "open" {
+  if pr.GetState() != "open" {
     logger.Println("Ignore closed pull request")
     fmt.Fprintf(w, `{}`)
     return
   }
 
   var repo Repo
-  err = db.Where("slug = ?", *pr.Base.Repo.FullName).Find(&repo).Error
+  err = db.Where("slug = ?",
+    pr.GetBase().GetRepo().GetFullName(),
+  ).Find(&repo).Error
   if err != nil {
-    logger.Println(err, *pr.Base.Repo.FullName)
+    logger.Println(err, pr.GetBase().GetRepo().GetFullName())
     fmt.Fprintf(w, `{"error":"repo not registered"}`)
     return
   }
@@ -84,21 +87,37 @@ func webhook(w http.ResponseWriter, r *http.Request) {
   }
 
   // check PR title and body for [ci] or [ci skip] flag
-  if pr.Title != nil && pr.Body != nil &&
-  strings.Contains(strings.ToLower(*pr.Title),
-      fmt.Sprintf("[%s]", buildFlag)) &&
-  strings.Contains(strings.ToLower(*pr.Body),
+  if pr.Title != nil && strings.Contains(strings.ToLower(*pr.Title),
       fmt.Sprintf("[%s]", buildFlag)) {
     flagExists = true
-  }
-
-  if !flagExists {
+  } else if pr.Body != nil && strings.Contains(strings.ToLower(*pr.Body),
+      fmt.Sprintf("[%s]", buildFlag)) {
+    flagExists = true
+  } else {
     // check labels for build flag if we haven't already found it
     for _, label := range pr.Labels {
       if label.Name != nil && strings.Contains(
-          strings.ToLower(*label.Name), buildFlag) {
+          strings.ToLower(label.GetName()), buildFlag) {
         flagExists = true
         break
+      }
+    }
+
+    if !flagExists {
+      // last but not least check the commit message for flags
+      var prService github.PullRequestsService
+      commits, _, err := prService.ListCommits(context.Background(),
+        pr.GetHead().GetUser().GetLogin(),
+        pr.GetHead().GetRepo().GetName(),
+        pr.GetNumber(), &github.ListOptions{})
+
+      if err == nil && len(commits) > 0 {
+        // check only last commit since older ones are irrelevant
+        commitMsg := strings.ToLower(commits[0].GetCommit().GetMessage())
+        flagExists = strings.Contains(
+          commitMsg, fmt.Sprintf("[%s]", buildFlag))
+      } else {
+        logger.Printf("Commits is empty or an error occurred: %+v\n", err)
       }
     }
   }
@@ -106,6 +125,9 @@ func webhook(w http.ResponseWriter, r *http.Request) {
   // ignoring pull-request! Repository is set
   // to opt-in and no build flag was found
   if repo.OptIn && !flagExists {
+    logger.Printf(
+      "Ignore optin=%t buildFlag=%s flagExists=%t\n",
+      repo.OptIn, buildFlag, flagExists)
     fmt.Fprintf(w, `{}`)
     return
   }
@@ -113,6 +135,9 @@ func webhook(w http.ResponseWriter, r *http.Request) {
   // ignoring pull-request! Repository is set
   // to opt-out and a skip flag was found
   if !repo.OptIn && flagExists {
+    logger.Printf(
+      "Ignore optin=%t buildFlag=%s flagExists=%t\n",
+      repo.OptIn, buildFlag, flagExists)
     fmt.Fprintf(w, `{}`)
     return
   }
@@ -122,19 +147,19 @@ func webhook(w http.ResponseWriter, r *http.Request) {
     Matrix: fmt.Sprintf(
       `"PROJECT=%s PRREPO=%s PRSHA=%s"`,
       repo.Project,
-      *pr.Head.Repo.CloneURL,
-      *pr.Head.SHA,
+      pr.GetHead().GetRepo().GetCloneURL(),
+      pr.GetHead().GetSHA(),
     ),
-    PRUser: *pr.Head.User.Login,
-    PRRepo: *pr.Head.Repo.Name,
-    PRSha: *pr.Head.SHA,
+    PRUser: pr.GetHead().GetUser().GetLogin(),
+    PRRepo: pr.GetHead().GetRepo().GetName(),
+    PRSha: pr.GetHead().GetSHA(),
   }
+
   err = db.Create(&build).Error
   if err != nil {
     logger.Println(err)
     fmt.Fprintf(w, `{"error":"database error"}`)
     return
   }
-
   fmt.Fprintf(w, `{}`)
 }
