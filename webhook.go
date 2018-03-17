@@ -87,17 +87,16 @@ func webhook(w http.ResponseWriter, r *http.Request) {
   }
 
   // check PR title and body for [ci] or [ci skip] flag
-  if pr.Title != nil && strings.Contains(strings.ToLower(*pr.Title),
+  if pr.Title != nil && strings.Contains(pr.GetTitle(),
       fmt.Sprintf("[%s]", buildFlag)) {
     flagExists = true
-  } else if pr.Body != nil && strings.Contains(strings.ToLower(*pr.Body),
+  } else if pr.Body != nil && strings.Contains(pr.GetBody(),
       fmt.Sprintf("[%s]", buildFlag)) {
     flagExists = true
   } else {
     // check labels for build flag if we haven't already found it
     for _, label := range pr.Labels {
-      if label.Name != nil && strings.Contains(
-          strings.ToLower(label.GetName()), buildFlag) {
+      if label.Name != nil && strings.Contains(label.GetName(), buildFlag) {
         flagExists = true
         break
       }
@@ -106,14 +105,15 @@ func webhook(w http.ResponseWriter, r *http.Request) {
     if !flagExists {
       // last but not least check the commit message for flags
       client := github.NewClient(nil)
-      commits, _, err := client.PullRequests.ListCommits(context.Background(),
+      commits, _, err := client.PullRequests.ListCommits(
+        context.Background(),
         pr.GetHead().GetUser().GetLogin(),
         pr.GetHead().GetRepo().GetName(),
         pr.GetNumber(), &github.ListOptions{})
 
       if err == nil && len(commits) > 0 {
         // check only last commit since older ones are irrelevant
-        commitMsg := strings.ToLower(commits[0].GetCommit().GetMessage())
+        commitMsg := commits[len(commits)-1].GetCommit().GetMessage()
         flagExists = strings.Contains(
           commitMsg, fmt.Sprintf("[%s]", buildFlag))
       } else {
