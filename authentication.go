@@ -64,12 +64,15 @@ func authentication(w http.ResponseWriter, r *http.Request) {
       Token: accessToken,
       Secret: secret,
     }
-    err = db.Create(&repo).Error
-    if err != nil {
-      logger.Println(err)
-      fmt.Fprintf(w, "Database Insert Failure :(\n%s",
-        "(the project probably already exists)")
-      return
+
+    if !devMode {
+      err = db.Create(&repo).Error
+      if err != nil {
+        logger.Println(err)
+        fmt.Fprintf(w, "Database Insert Failure :(\n%s",
+          "(the project probably already exists)")
+        return
+      }
     }
 
     name := "web"
@@ -82,11 +85,13 @@ func authentication(w http.ResponseWriter, r *http.Request) {
       },
     }
 
-    _, _, err = client.Repositories.CreateHook(ctx, repoSlice[0], repoSlice[1], &hook)
-    if err != nil {
-      logger.Println(err)
-      fmt.Fprintf(w, "Create Hook Failure :(")
-      return
+    if !devMode {
+      _, _, err = client.Repositories.CreateHook(ctx, repoSlice[0], repoSlice[1], &hook)
+      if err != nil {
+        logger.Println(err)
+        fmt.Fprintf(w, "Create Hook Failure :(")
+        return
+      }
     }
 
     fmt.Fprintf(w, `<!DOCTYPE html>
@@ -97,17 +102,21 @@ func authentication(w http.ResponseWriter, r *http.Request) {
           <a href="https://github.com/%s/settings/hooks">webhook</a>.
         </p>
       </body>
-      </html>`, repo)
+      </html>`, repo.Slug)
     return
   }
 
   code := r.URL.Query().Get("code")
   if code != "" {
     tok, err := conf.Exchange(ctx, code)
-    if err != nil {
+    if !devMode && err != nil {
       fmt.Println(err)
       fmt.Fprintf(w, "Token Failure :(")
     } else {
+      var token string = "1234"
+      if !devMode {
+        token = tok.AccessToken
+      }
       fmt.Fprintf(w, `<!DOCTYPE html>
         <html>
         <body>
@@ -119,7 +128,7 @@ func authentication(w http.ResponseWriter, r *http.Request) {
           <input type="submit" style="display:none" />
         </form>
         </body>
-        </html>`, tok.AccessToken)
+        </html>`, token)
     }
   } else {
     url := conf.AuthCodeURL("state", oauth2.AccessTypeOffline)

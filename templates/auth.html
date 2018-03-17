@@ -1,0 +1,24 @@
+{{define "auth.html"}}
+
+{{template "header.html"}}
+
+<div class="container">
+  <form action="/result">
+    <div class="form-group">
+      <input type="hidden" name="access_token" value="{{.}}" />
+      <label for="projectInput">Project</label>
+      <input type="text" class="form-control" id="projectInput" name="project" aria-describedby="projectHelp" placeholder="Enter your project name">
+      <small id="projectHelp" class="form-text text-muted">That could be somthing like ganggo, socialhome or diaspora</small>
+    </div>
+    <div class="form-group">
+      <label for="repoInput">Repository</label>
+      <input type="text" class="form-control" id="repoInput" name="repo" aria-describedby="repoHelp" placeholder="Enter your project slug">
+      <small id="repoHelp" class="form-text text-muted">Your project slug is the Github user- and repository name separated by a slash e.g. ganggo/federation</small>
+    </div>
+    <button type="submit" class="btn btn-primary">Submit</button>
+  </form>
+</div>
+
+{{template "footer.html"}}
+
+{{end}}

@@ -31,6 +31,7 @@ import (
 )
 
 var (
+  devMode = false
   databaseDriver = "sqlite3"
   databaseDSN = "./server.db"
   logger = log.New(os.Stdout, "", log.Ldate | log.Ltime | log.Lmicroseconds | log.Lshortfile)
@@ -45,6 +46,9 @@ var (
 func init() {
   rand.Seed(time.Now().UnixNano())
 
+  flag.BoolVar(&devMode, "devMode", devMode,
+    "If devMode is set all parameters become optional " +
+    "and authentication is disabled!")
   flag.StringVar(&serverDomain, "server-domain", "localhost:8080",
     "Specify the endpoint your server is running on. " +
     "This is important for e.g. github callbacks!")
@@ -81,7 +85,7 @@ func Secret(n int) string {
 
 func main() {
   flag.Parse()
-  if travisToken == "" || conf.ClientID == "" || conf.ClientSecret == "" {
+  if !devMode && (travisToken == "" || conf.ClientID == "" || conf.ClientSecret == "") {
     flag.Usage()
     return
   }
@@ -89,9 +93,10 @@ func main() {
   // start build agent
   go BuildAgent()
 
-  http.HandleFunc("/", frontend)
+  http.HandleFunc("/", indexPage)
   http.HandleFunc("/images/stats/builds.png", buildsPNG)
-  http.HandleFunc("/auth", authentication)
+  http.HandleFunc("/auth", authenticationPage)
+  http.HandleFunc("/result", resultPage)
   http.HandleFunc("/hook", webhook)
 
   logger.Println("Running webserver on :8181")
