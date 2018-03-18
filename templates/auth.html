@@ -15,6 +15,29 @@
       <input type="text" class="form-control" id="repoInput" name="repo" aria-describedby="repoHelp" placeholder="Enter your project slug">
       <small id="repoHelp" class="form-text text-muted">Your project slug is the Github user- and repository name separated by a slash e.g. ganggo/federation</small>
     </div>
+    <div class="form-check mb-3">
+      <input type="checkbox" class="form-check-input" id="optinInput" name="optin" describedby="optinHelp">
+      <label class="form-check-label" for="optinInput">Check if you want to opt-in on a new test</label>
+      <small id="optinHelp" class="form-text text-muted">
+        That would mean that tests are triggered if you specify <code>[ci]</code> in the PR title, body, commit-message
+        or if the PR was tagged with <span class="badge badge-primary">ci</span>. If you leave the box unchecked
+        tests will be triggered on every pull-request. However you can skip them by using <code>[ci skip]</code>
+        in the mentioned fields or tag it with <span class="badge badge-primary">ci skip</span>.
+      </small>
+      <div class="form-group">
+        <label for="optinFlagInput">(optional) Custom Flags</label>
+        <input type="text" class="form-control" id="optinFlagInput" name="optinFlag" aria-describedby="optinFlagHelp" placeholder="default is 'ci'">
+        <small id="optinFlagHelp" class="form-text text-muted">
+          If you want to use custom build triggers for opt-in you can specify it here.
+        </small>
+      </div>
+      <div class="form-group">
+        <input type="text" class="form-control" name="optoutFlag" aria-describedby="optoutFlagHelp" placeholder="default is 'ci skip'">
+        <small id="optoutFlagHelp" class="form-text text-muted">
+          If you want to use custom build triggers for opt-out you can specify it here.
+        </small>
+      </div>
+    </div>
     <button type="submit" class="btn btn-primary">Submit</button>
   </form>
 </div>
