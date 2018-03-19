@@ -108,7 +108,7 @@ func resultPage(w http.ResponseWriter, r *http.Request) {
     }
 
     name := "web"
-    hook := github.Hook{
+    newHook := github.Hook{
       Name: &name, Events: []string{"pull_request"},
       Config: map[string]interface{}{
         "content_type": "json",
@@ -118,11 +118,29 @@ func resultPage(w http.ResponseWriter, r *http.Request) {
     }
 
     if !devMode {
-      _, _, err := client.Repositories.CreateHook(ctx, repoSlice[0], repoSlice[1], &hook)
+      hooks, _, err := client.Repositories.ListHooks(ctx,
+        repoSlice[0], repoSlice[1], &github.ListOptions{})
       if err != nil {
         logger.Println(err)
-        render(w, "error.html", "Cannot create the repository hook")
+        render(w, "error.html", "Cannot list repository hooks")
         return
+      }
+
+      var hookExists = false
+      for _, hook := range hooks {
+        if hook.GetURL() == newHook.Config["url"].(string) {
+          hookExists = true
+        }
+      }
+
+      if !hookExists {
+        _, _, err := client.Repositories.CreateHook(ctx,
+          repoSlice[0], repoSlice[1], &newHook)
+        if err != nil {
+          logger.Println(err)
+          render(w, "error.html", "Cannot create repository hooks")
+          return
+        }
       }
 
       err = repo.CreateOrUpdate()
