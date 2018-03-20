@@ -62,8 +62,11 @@ func (repo *Repo) CreateOrUpdate() error {
       return err
     }
   } else if err == nil {
-    repo.ID = oldRecord.ID
-    err = db.Update(repo).Error
+    // NOTE you have to specify opt_in as extra update field
+    // since gorm will not update if bool is false
+    // see http://gorm.io/docs/update.html
+    err = db.Model(repo).Where("id = ?", oldRecord.ID).
+      Update(repo).Update("opt_in", repo.OptIn).Error
     if err != nil {
       return err
     }

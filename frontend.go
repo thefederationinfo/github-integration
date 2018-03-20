@@ -142,13 +142,12 @@ func resultPage(w http.ResponseWriter, r *http.Request) {
           return
         }
       }
-
-      err = repo.CreateOrUpdate()
-      if err != nil {
-        logger.Println(err)
-        render(w, "error.html", "Cannot insert/update the database record")
-        return
-      }
+    }
+    err := repo.CreateOrUpdate()
+    if err != nil {
+      logger.Println(err)
+      render(w, "error.html", "Cannot insert/update the database record")
+      return
     }
 
     render(w, "result.html", repo.Slug)
