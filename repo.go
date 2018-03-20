@@ -65,6 +65,7 @@ func (repo *Repo) CreateOrUpdate() error {
     // NOTE you have to specify opt_in as extra update field
     // since gorm will not update if bool is false
     // see http://gorm.io/docs/update.html
+    repo.Secret = "" // set to default then it won't update
     err = db.Model(repo).Where("id = ?", oldRecord.ID).
       Update(repo).Update("opt_in", repo.OptIn).Error
     if err != nil {
