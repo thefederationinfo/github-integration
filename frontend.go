@@ -127,8 +127,10 @@ func resultPage(w http.ResponseWriter, r *http.Request) {
       }
 
       var hookExists = false
+      hookURL, _ := newHook.Config["url"].(string)
       for _, hook := range hooks {
-        if hook.GetURL() == newHook.Config["url"].(string) {
+        curHookURL, _ := hook.Config["url"].(string)
+        if hookURL == curHookURL {
           hookExists = true
         }
       }
