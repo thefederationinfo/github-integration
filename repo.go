@@ -19,6 +19,7 @@ package main
 
 import (
   "github.com/jinzhu/gorm"
+  _ "github.com/jinzhu/gorm/dialects/sqlite"
 )
 
 type Repo struct {
@@ -33,3 +34,43 @@ type Repo struct {
 }
 
 type Repos []Repo
+
+func (repos *Repos) FindAll() error {
+  db, err := gorm.Open(databaseDriver, databaseDSN)
+  if err != nil {
+    return err
+  }
+  defer db.Close()
+
+  return db.Find(repos).Error
+}
+
+func (repo *Repo) CreateOrUpdate() error {
+  db, err := gorm.Open(databaseDriver, databaseDSN)
+  if err != nil {
+    return err
+  }
+  defer db.Close()
+
+  var oldRecord Repo
+  err = db.Where(
+    "project = ? and slug = ?", repo.Project, repo.Slug,
+  ).Find(&oldRecord).Error
+  if err == gorm.ErrRecordNotFound {
+    err = db.Create(repo).Error
+    if err != nil {
+      return err
+    }
+  } else if err == nil {
+    // NOTE you have to specify opt_in as extra update field
+    // since gorm will not update if bool is false
+    // see http://gorm.io/docs/update.html
+    repo.Secret = "" // set to default then it won't update
+    err = db.Model(repo).Where("id = ?", oldRecord.ID).
+      Update(repo).Update("opt_in", repo.OptIn).Error
+    if err != nil {
+      return err
+    }
+  }
+  return err
+}

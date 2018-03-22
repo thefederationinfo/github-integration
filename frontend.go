@@ -19,8 +19,6 @@ package main
 
 import (
   "net/http"
-  "github.com/jinzhu/gorm"
-  _ "github.com/jinzhu/gorm/dialects/sqlite"
   "html/template"
   "fmt"
   "golang.org/x/oauth2"
@@ -57,16 +55,8 @@ func render(w http.ResponseWriter, name string, s interface{}) {
 }
 
 func indexPage(w http.ResponseWriter, r *http.Request) {
-  db, err := gorm.Open(databaseDriver, databaseDSN)
-  if err != nil {
-    logger.Println(err)
-    render(w, "error.html", "Cannot connect to database")
-    return
-  }
-  defer db.Close()
-
   var repos Repos
-  err = db.Find(&repos).Error
+  err := repos.FindAll()
   if err != nil {
     logger.Println(err)
     render(w, "error.html", "No repositories found")
@@ -82,14 +72,6 @@ func resultPage(w http.ResponseWriter, r *http.Request) {
   project := r.URL.Query().Get("project")
 
   if accessToken != "" && repo != "" && project != "" {
-    db, err := gorm.Open(databaseDriver, databaseDSN)
-    if err != nil {
-      logger.Println(err)
-      render(w, "error.html", "Cannot connect to database")
-      return
-    }
-    defer db.Close()
-
     ctx := context.Background()
     ts := oauth2.StaticTokenSource(
       &oauth2.Token{AccessToken: accessToken},
@@ -126,7 +108,7 @@ func resultPage(w http.ResponseWriter, r *http.Request) {
     }
 
     name := "web"
-    hook := github.Hook{
+    newHook := github.Hook{
       Name: &name, Events: []string{"pull_request"},
       Config: map[string]interface{}{
         "content_type": "json",
@@ -136,19 +118,38 @@ func resultPage(w http.ResponseWriter, r *http.Request) {
     }
 
     if !devMode {
-      _, _, err = client.Repositories.CreateHook(ctx, repoSlice[0], repoSlice[1], &hook)
+      hooks, _, err := client.Repositories.ListHooks(ctx,
+        repoSlice[0], repoSlice[1], &github.ListOptions{})
       if err != nil {
         logger.Println(err)
-        render(w, "error.html", "Cannot create the repository hook")
+        render(w, "error.html", "Cannot list repository hooks")
         return
       }
 
-      err = db.Create(&repo).Error
-      if err != nil {
-        logger.Println(err)
-        render(w, "error.html", "Cannot insert into database (probably the project already exists)")
-        return
+      var hookExists = false
+      hookURL, _ := newHook.Config["url"].(string)
+      for _, hook := range hooks {
+        curHookURL, _ := hook.Config["url"].(string)
+        if hookURL == curHookURL {
+          hookExists = true
+        }
       }
+
+      if !hookExists {
+        _, _, err := client.Repositories.CreateHook(ctx,
+          repoSlice[0], repoSlice[1], &newHook)
+        if err != nil {
+          logger.Println(err)
+          render(w, "error.html", "Cannot create repository hooks")
+          return
+        }
+      }
+    }
+    err := repo.CreateOrUpdate()
+    if err != nil {
+      logger.Println(err)
+      render(w, "error.html", "Cannot insert/update the database record")
+      return
     }
 
     render(w, "result.html", repo.Slug)
